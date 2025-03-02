@@ -1,0 +1,16 @@
+SELECT
+    dtbase,
+    tppessoa,
+    cdproduto,
+    dsproduto,
+    SUM(vlsaldo) AS saldo
+FROM investimento_contrato_mensal AS inv
+WHERE inv.dtbase = '2025-02-28'
+    AND inv.vlsaldo > 0
+    AND inv.cdcooperativa = 1
+    and inv.tppessoa in ('PF', 'Pessoa Física')
+GROUP BY
+    dtbase,
+    tppessoa,
+    cdproduto,
+    dsproduto
