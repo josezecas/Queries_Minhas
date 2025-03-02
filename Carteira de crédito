@@ -1,0 +1,34 @@
+SELECT
+    rc.dtbase,                                              -- Seleciona a data base (período) da carteira
+    rc.tppessoa,                                            -- Seleciona o tipo de pessoa (PF ou PJ)
+    CASE 
+        WHEN rc.cdsubproduto IN ('BND', 'MIC') THEN 'REP'   -- Se o subproduto for BND ou MIC, coloca 'REP' como cdproduto (REP = 'REPASSE')
+        WHEN rc.cdmodalidade IN (901, 902) THEN 'IMB'       -- Se a modalidade for 901 ou 902, coloca 'IMB' como cdproduto (IMB = 'IMOBILIARIO)
+        ELSE rc.cdproduto                                   -- Caso contrário, mantém o valor original de cdproduto
+    END AS cdproduto,                                       -- Define a coluna 'cdproduto' de acordo com as condições acima
+    
+    SUM(rc.sddevedor) AS sddevedor,                         -- Soma dos valores de 'sddevedor' (saldo devedor) para cada grupo
+    SUM(CASE WHEN rc.qtdiasatraso > 90 THEN rc.sddevedor 
+    ELSE 0 END) AS saldo_em_atraso,                         -- Aqui resulta o valore de Inadimplencia  
+    SUM(rc.vlprovisao) AS vlprovisao,                       -- Aqui resulta o valore de Provisao
+    COUNT(rc.nrcontrato) AS qtcontratostotal                -- Total de Contratos por produto
+
+FROM 
+    carteira_mensal AS rc                                  -- Tabela 'carteira_mensal' é referenciada com o alias 'rc'
+
+WHERE
+    rc.cdcooperativa = 1                                    -- Filtra registros onde a cooperativa é 1 (Viacredi)
+    AND rc.cdproduto NOT IN ('LDC', 'LDT')                  -- Exclui os produtos 'LDC' e 'LDT' (Regra conforme documentação do Painel de Gestão Central Ailos)
+    AND rc.sddevedor > 0                                    -- Considera apenas registros onde o saldo devedor é maior que 0
+    AND rc.tppessoa = 'PF'                                  -- Filtra apenas as pessoas físicas (PF)
+    AND rc.dtbase = (SELECT MAX(dtbase) FROM carteira_mensal)  -- Filtra apenas os registros da maior dtbase (último período)
+
+GROUP BY
+    rc.dtbase,                                           -- Agrupa os resultados pela data base
+    rc.tppessoa,                                         -- Agrupa também pelo tipo de pessoa
+    -- Agrupa pelo valor de cdproduto calculado nas condições do CASE
+    CASE 
+        WHEN rc.cdsubproduto IN ('BND', 'MIC') THEN 'REP'   
+        WHEN rc.cdmodalidade IN (901, 902) THEN 'IMB'        
+        ELSE rc.cdproduto
+    END
