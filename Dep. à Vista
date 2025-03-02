@@ -1,0 +1,29 @@
+SELECT
+    LASTDAYOFMONTH(cont.dtbase) AS ultimo_dia_mes,
+    cont.tppessoa,
+    COUNT(cont.nrcc) AS quantidade,
+    SUM(
+        COALESCE(vlsaldo, 0) + 
+        COALESCE(vllimitechequeespecialutilizado, 0) + 
+        COALESCE(vlsaquedepositobloqueado, 0) + 
+        COALESCE(vladiantamentodepositante, 0) + 
+        COALESCE(vladiantamentodepositantecreditoliquidacao, 0) + 
+        COALESCE(vlbloqueadojudicialmente, 0) + 
+        COALESCE(vlbloqueadopix, 0) + 
+        COALESCE(vlsobraemprestimo, 0) + 
+        COALESCE(vlcontainvestimento, 0) + 
+        COALESCE(vllancamentosdevolucaodeposito, 0) - 
+        COALESCE(vldevolvidodeposito, 0)
+    ) AS Valor
+FROM conta_corrente_contabil AS cont
+WHERE cont.dspessoa = 'Pessoa Fisica'
+    AND cont.cdcooperativa = 1
+    AND cont.dtbase >= DATE '2024-06-01'
+    AND cont.dtbase = (
+        SELECT MAX(dtbase)
+        FROM conta_corrente_contabil
+        WHERE LASTDAYOFMONTH(dtbase) = LASTDAYOFMONTH(cont.dtbase)
+    )
+GROUP BY 
+    LASTDAYOFMONTH(cont.dtbase),
+    cont.tppessoa
